@@ -1,129 +1,49 @@
 <template>
-  <v-app>
-    <v-container>
-      <v-row>
-        <v-col cols="4" class="d-flex justify-center align-center">
-          <div class="pa-2">
-            <h3 class="pb-2">Countries in 2018 with the highest GDP</h3>
-            <p>
-              Gross domestic product by country allows you to compare the
-              economies of the nations. It measures everything produced by
-              everyone in the country whether they are citizens or foreigners.
-              The data has been taken from
-              <a
-                href="https://www.thebalance.com/gdp-by-country-3-ways-to-compare-3306012"
-                >The Balance</a
-              >.
-            </p>
-          </div>
-        </v-col>
-        <v-col id="arc" />
-      </v-row>
-    </v-container>
-  </v-app>
+  <div id="sk">
+    <Controls :data="data" @remove-edge="removeEdge" v-if="data" />
+    <Sankey :data="data" />
+  </div>
 </template>
 
 <script>
-import * as d3 from "d3";
+import Sankey from "./components/Sankey.vue";
+import Controls from "./components/Controls.vue";
+// import * as d3 from "d3";
+// import { sankey, sankeyJustify } from "d3-sankey";
+// import sankeyMixin from "../mixins/sankey-mixin";
 
 export default {
   name: "App",
-  data() {
-    return {
-      gdp: [
-        {
-          country: "USA",
-          value: 20.5,
-        },
-        {
-          country: "China",
-          value: 13.4,
-        },
-        {
-          country: "Germany",
-          value: 4.0,
-        },
-        {
-          country: "Japan",
-          value: 4.9,
-        },
-        {
-          country: "France",
-          value: 2.8,
-        },
-      ],
-    };
+  components: { Sankey, Controls },
+  data: () => ({
+    data: null,
+    edgeToRemove: null,
+  }),
+  async mounted() {
+    const response = await fetch(
+      "https://raw.githubusercontent.com/ozlongblack/d3/master/energy.json"
+    );
+    this.data = await response.json();
   },
-  mounted() {
-    this.generateArc();
-  },
-
   methods: {
-    generateArc() {
-      const w = 500;
-      const h = 500;
-
-      const svg = d3
-        .select("#arc")
-        .append("svg")
-        .attr("width", w)
-        .attr("height", h);
-
-      const sortedGDP = this.gdp.sort((a, b) => (a.value > b.value ? 1 : -1));
-      const color = d3.scaleOrdinal(d3.schemeDark2);
-      const max_gdp = d3.max(sortedGDP, (o) => o.value);
-
-      const angleScale = d3
-        .scaleLinear()
-        .domain([0, max_gdp])
-        .range([0, 1.5 * Math.PI]);
-
-      const arc = d3
-        .arc()
-        .innerRadius((d, i) => (i + 1) * 25)
-        .outerRadius((d, i) => (i + 2) * 25)
-        .startAngle(angleScale(0))
-        .endAngle((d) => angleScale(d.value));
-
-      const g = svg.append("g");
-
-      g.selectAll("path")
-        .data(sortedGDP)
-        .enter()
-        .append("path")
-        .attr("d", arc)
-        .attr("fill", (d, i) => color(i))
-        .attr("stroke", "#FFF")
-        .attr("stroke-width", "1px")
-        .on("mouseenter", function () {
-          d3.select(this).transition().duration(500).attr("opacity", 0.5);
-        })
-        .on("mouseout", function () {
-          d3.select(this).transition().duration(500).attr("opacity", 1);
-        });
-
-      g.selectAll("text")
-        .data(this.gdp)
-        .enter()
-        .append("text")
-        .text((d) => `${d.country} - ${d.value} Trillion`)
-        .attr("x", -150)
-        .attr("dy", -8)
-        .attr("y", (d, i) => -(i + 1) * 25);
-
-      g.attr("transform", "translate(200, 300)");
+    removeEdge(edge) {
+      // TODO Remove edge functionality
+      const source = edge.source;
+      const target = edge.target;
+      const sourceUsedAnywhere =
+        this.data.links.filter(
+          (link) =>
+            link.source.name === source.name || link.target.name === source.name
+        ).length > 1;
+      const targetUsedAnywhere =
+        this.data.links.filter(
+          (link) =>
+            link.target.name === source.name || link.target.name === target.name
+        ).length > 1;
+      if (!sourceUsedAnywhere) this.data.nodes.splice(edge.source.index, 1);
+      if (!targetUsedAnywhere) this.data.nodes.splice(edge.target.index, 1);
+      this.data.links.splice(edge.index, 1);
     },
   },
 };
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
