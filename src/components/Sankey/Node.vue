@@ -19,6 +19,7 @@ export default {
     length: Number,
     width: Number,
   },
+  methods: {},
   computed: {
     textStyle() {
       return {
